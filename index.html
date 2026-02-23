@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Limbo Swap Game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: black;
+  overflow: hidden;
+  touch-action: manipulation;
+  font-family: Arial, sans-serif;
+}
+
+.wrapper {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.container {
+  position: relative;
+  width: 240px;
+  height: 420px;
+}
+
+@media (max-height: 520px) {
+  .container { transform: scale(0.8); }
+}
+@media (max-height: 420px) {
+  .container { transform: scale(0.65); }
+}
+
+.key {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background: red;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.65s cubic-bezier(.25,1.4,.4,1),
+    background-color 0.3s,
+    filter 0.3s;
+}
+
+.key img {
+  width: 60px;
+  pointer-events: none;
+}
+
+.green {
+  background: #00ff55;
+  filter: drop-shadow(0 0 20px #00ff55);
+}
+
+.result {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 160px;
+  background: rgba(0,0,0,0.7);
+  z-index: 999;
+}
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+  <div class="container" id="container"></div>
+</div>
+
+<script>
+const container = document.getElementById("container");
+
+const slots = [
+  {x: 0,   y: 0},   {x: 120, y: 0},
+  {x: 0,   y: 110}, {x: 120, y: 110},
+  {x: 0,   y: 220}, {x: 120, y: 220},
+  {x: 0,   y: 330}, {x: 120, y: 330},
+];
+
+const keys = [];
+let order = [...Array(8).keys()];
+let targetIndex = Math.floor(Math.random() * 8);
+let scrambling = true;
+
+// CREATE KEYS
+for (let i = 0; i < 8; i++) {
+  const key = document.createElement("div");
+  key.className = "key";
+  key.innerHTML = '<img src="key.png">';
+  container.appendChild(key);
+  keys.push(key);
+}
+
+// RENDER
+function render() {
+  keys.forEach((key, i) => {
+    const s = slots[order[i]];
+    key.style.transform = `translate(${s.x}px, ${s.y}px)`;
+  });
+}
+
+render();
+
+// GREEN FLASH
+keys[targetIndex].classList.add("green");
+setTimeout(() => {
+  keys[targetIndex].classList.remove("green");
+}, 2000);
+
+// LIMBO-STYLE SCRAMBLE
+let ticks = 0;
+const maxTicks = 34;
+
+const scramble = setInterval(() => {
+  ticks++;
+
+  // Difficulty curve
+  const intensity = Math.min(1, ticks / maxTicks);
+
+  // How many swaps this tick
+  let swaps = 1;
+  if (intensity > 0.35) swaps = 2;
+  if (intensity > 0.6) swaps = 3;
+  if (intensity > 0.8) swaps = 4;
+
+  // Speed ramps
+  const speed = 700 - intensity * 350;
+  keys.forEach(k => k.style.transitionDuration = speed + "ms");
+
+  // Perform multiple swaps
+  for (let i = 0; i < swaps; i++) {
+    const a = Math.floor(Math.random() * 8);
+    let b = Math.floor(Math.random() * 8);
+    while (b === a) b = Math.floor(Math.random() * 8);
+    [order[a], order[b]] = [order[b], order[a]];
+  }
+
+  render();
+
+  if (ticks >= maxTicks) {
+    clearInterval(scramble);
+    scrambling = false;
+  }
+}, 450);
+
+// CLICK CHECK
+keys.forEach((key, index) => {
+  key.addEventListener("click", () => {
+    if (scrambling) return;
+
+    showResult(
+      index === targetIndex ? "✔" : "✖",
+      index === targetIndex ? "#00ff55" : "red"
+    );
+
+    setTimeout(() => location.reload(), 1200);
+  });
+});
+
+function showResult(symbol, color) {
+  const div = document.createElement("div");
+  div.className = "result";
+  div.textContent = symbol;
+  div.style.color = color;
+  document.body.appendChild(div);
+}
+</script>
+
+</body>
+</html>
